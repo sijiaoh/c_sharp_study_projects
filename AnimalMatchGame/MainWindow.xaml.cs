@@ -12,15 +12,32 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace AnimalMatchGame {
   /// <summary>
   /// Interaction logic for MainWindow.xaml
   /// </summary>
   public partial class MainWindow : Window {
+    DispatcherTimer timer = new DispatcherTimer();
+    int tenthsOfSecondsElapsed;
+    int matchesFound;
+
     public MainWindow() {
       InitializeComponent();
+
+      timer.Interval = TimeSpan.FromSeconds(.1);
+      timer.Tick += Timer_Tick;
       SetUpGame();
+    }
+
+    private void Timer_Tick(object sender, EventArgs e) {
+      tenthsOfSecondsElapsed++;
+      timeTextBlock.Text = (tenthsOfSecondsElapsed / 10f).ToString();
+      if (GameCleard()) {
+        timer.Stop();
+        timeTextBlock.Text += " - Play again?";
+      }
     }
 
     private void SetUpGame() {
@@ -31,11 +48,20 @@ namespace AnimalMatchGame {
 
       var random = new Random();
       foreach (var textBlock in mainGrid.Children.OfType<TextBlock>()) {
+        if (animalEmoji.Count <= 0) break;
+
         var index = random.Next(animalEmoji.Count);
         var nextEmoji = animalEmoji[index];
-        textBlock.Text = nextEmoji;
         animalEmoji.RemoveAt(index);
+
+        textBlock.Text = nextEmoji;
+        textBlock.Visibility = Visibility.Visible;
       }
+
+      tenthsOfSecondsElapsed = 0;
+      matchesFound = 0;
+
+      timer.Start();
     }
 
     TextBlock lastTextBlockClicked;
@@ -47,7 +73,7 @@ namespace AnimalMatchGame {
       }
       else {
         if (textBlock.Text == lastTextBlockClicked.Text)
-          textBlock.Visibility = Visibility.Hidden;
+          OnMatched(textBlock);
         else
           lastTextBlockClicked.Visibility = Visibility.Visible;
         lastTextBlockClicked = null;
@@ -56,6 +82,21 @@ namespace AnimalMatchGame {
 
     private bool FindingMatch() {
       return lastTextBlockClicked != null;
+    }
+
+    private void OnMatched(TextBlock textBlock) {
+      textBlock.Visibility = Visibility.Hidden;
+      matchesFound++;
+    }
+
+    private void TimeTextBlock_MouseDown(object sender, MouseButtonEventArgs e) {
+      if (GameCleard()) {
+        SetUpGame();
+      }
+    }
+
+    private bool GameCleard() {
+      return matchesFound >= 8;
     }
   }
 }
